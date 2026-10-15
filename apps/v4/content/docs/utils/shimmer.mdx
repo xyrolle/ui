@@ -146,13 +146,7 @@ Use `shimmer-none` to turn the effect off and render the text normally. It works
 
 ## Fallback
 
-The shimmer is built on modern color features, [relative color syntax](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_colors/Relative_colors) and `color-mix()`, which are available in all current browsers. In older browsers without support, the highlight gradient is dropped and the text can render transparent. If you target older browsers, apply `shimmer` conditionally with a `supports-*` variant:
-
-```tsx
-<p className="supports-[color:oklch(from_white_l_c_h)]:shimmer">
-  Generating response&hellip;
-</p>
-```
+The highlight is derived from the text color with [relative color syntax](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_colors/Relative_colors) from `currentColor`, which is available in all current browsers. In older browsers without it (Chrome and Edge before 131, Firefox before 133, Safari before 18), the text renders in its own color with no visible highlight. There is nothing to configure. A `shimmer-color-<color>` highlight does not depend on the text color, so it still shimmers there.
 
 ## Reduced Motion
 

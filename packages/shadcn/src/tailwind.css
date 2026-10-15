@@ -547,10 +547,7 @@
 @utility shimmer {
   --_spread: var(--shimmer-spread, calc(3ch + 40px));
   --_base: currentColor;
-  --_highlight: var(
-    --shimmer-color,
-    oklch(from currentColor l c h / calc(alpha* 0.2))
-  );
+  --_highlight: var(--shimmer-color, currentColor);
 
   background-image: var(
     --shimmer-image,
@@ -573,11 +570,18 @@
   -webkit-text-fill-color: var(--shimmer-text-fill, transparent);
   animation: tw-shimmer var(--shimmer-duration, 2s) linear infinite;
 
-  @variant dark {
+  @supports (color: oklch(from currentColor l c h)) {
     --_highlight: var(
       --shimmer-color,
-      oklch(from currentColor max(0.8, calc(l + 0.4)) c h / calc(alpha + 0.4))
+      oklch(from currentColor l c h / calc(alpha* 0.2))
     );
+
+    @variant dark {
+      --_highlight: var(
+        --shimmer-color,
+        oklch(from currentColor max(0.8, calc(l + 0.4)) c h / calc(alpha + 0.4))
+      );
+    }
   }
 
   &:where([dir="rtl"], [dir="rtl"] *) {
