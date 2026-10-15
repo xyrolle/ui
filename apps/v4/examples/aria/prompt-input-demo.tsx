@@ -146,6 +146,10 @@ export function PromptInputDemo() {
             }}
             placeholder="Ask the agent to change your code..."
             onKeyDown={(event) => {
+              if (event.nativeEvent.isComposing || event.keyCode === 229) {
+                return
+              }
+
               if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault()
                 formRef.current?.requestSubmit()

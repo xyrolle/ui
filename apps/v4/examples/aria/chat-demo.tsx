@@ -310,6 +310,13 @@ export function ChatDemo() {
                   aria-label="Message"
                   className="min-h-14"
                   onKeyDown={(event) => {
+                    if (
+                      event.nativeEvent.isComposing ||
+                      event.keyCode === 229
+                    ) {
+                      return
+                    }
+
                     if (event.key === "Enter" && !event.shiftKey) {
                       event.preventDefault()
                       formRef.current?.requestSubmit()

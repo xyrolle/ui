@@ -112,10 +112,14 @@ Put the two [Model Selector](/docs/ai-elements/radix/model-selector) menus in th
 
 ## Keyboard
 
-Enter sends the message. Shift+Enter adds a new line.
+Enter sends the message. Shift+Enter adds a new line. While an input method editor (IME) is composing text, such as Japanese, Chinese or Korean, Enter confirms the composition instead of sending. Safari reports that Enter with `keyCode` 229 rather than `isComposing`, so check both.
 
 ```tsx showLineNumbers
 onKeyDown={(event) => {
+  if (event.nativeEvent.isComposing || event.keyCode === 229) {
+    return
+  }
+
   if (event.key === "Enter" && !event.shiftKey) {
     event.preventDefault()
     formRef.current?.requestSubmit()
