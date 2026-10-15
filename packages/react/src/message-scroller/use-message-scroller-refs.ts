@@ -9,6 +9,7 @@ import { EMPTY_MESSAGE_SCROLLER_SCROLLABLE } from "./types"
 import type {
   MessageScrollerDefaultScrollPosition,
   MessageScrollerMode,
+  MessageScrollerPendingScroll,
   MessageScrollerScrollable,
   MessageScrollerScrollOptions,
   MessageScrollerStore,
@@ -40,7 +41,7 @@ type MessageScrollerRefs = {
     viewportTop: number
   } | null>
   preserveScrollOnPrependRef: React.RefObject<boolean>
-  pendingDefaultScrollStore: MessageScrollerStore<boolean>
+  pendingDefaultScrollStore: MessageScrollerStore<MessageScrollerPendingScroll>
   rootRef: React.RefObject<HTMLDivElement | null>
   scrollEdgeThresholdRef: React.RefObject<number>
   scrollMarginRef: React.RefObject<number>
@@ -110,7 +111,9 @@ function useMessageScrollerRefs({
   const spacerRef = React.useRef<HTMLDivElement | null>(null)
   const stateFrameRef = React.useRef<number | null>(null)
   const pendingDefaultScrollStoreRef =
-    React.useRef<MessageScrollerStore<boolean> | null>(null)
+    React.useRef<MessageScrollerStore<MessageScrollerPendingScroll> | null>(
+      null
+    )
   const stateStoreRef =
     React.useRef<MessageScrollerStore<MessageScrollerScrollable> | null>(null)
   const autoscrollingTimeoutRef = React.useRef<number | null>(null)
@@ -123,11 +126,11 @@ function useMessageScrollerRefs({
   const handledScrollAnchorsRef = React.useRef(new WeakSet<HTMLElement>())
 
   if (pendingDefaultScrollStoreRef.current === null) {
-    pendingDefaultScrollStoreRef.current = createMessageScrollerStore(
-      defaultScrollPosition === "end" ||
-        defaultScrollPosition === "last-anchor",
-      (current, next) => current === next
-    )
+    pendingDefaultScrollStoreRef.current =
+      createMessageScrollerStore<MessageScrollerPendingScroll>(
+        defaultScrollPosition === "start" ? null : defaultScrollPosition,
+        (current, next) => current === next
+      )
   }
 
   if (stateStoreRef.current === null) {
@@ -184,7 +187,7 @@ function useMessageScrollerRefs({
 }
 
 function clearPendingDefaultScroll(refs: MessageScrollerRefs) {
-  refs.pendingDefaultScrollStore.setSnapshot(false)
+  refs.pendingDefaultScrollStore.setSnapshot(null)
 }
 
 function markDefaultScrollPositionApplied(refs: MessageScrollerRefs) {

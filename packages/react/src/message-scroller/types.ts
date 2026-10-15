@@ -43,6 +43,13 @@ type MessageScrollerMode =
 // Where a saved transcript opens on the first non-empty render.
 type MessageScrollerDefaultScrollPosition = "start" | "end" | "last-anchor"
 
+// The opening position still waiting to be applied, mirrored as the value of
+// data-pending-scroll. "start" needs no hold, so it never pends.
+type MessageScrollerPendingScroll = Exclude<
+  MessageScrollerDefaultScrollPosition,
+  "start"
+> | null
+
 // Which transcript edge MessageScrollerButton scrolls toward.
 type MessageScrollerButtonDirection = "start" | "end"
 
@@ -180,7 +187,7 @@ type MessageScrollerContextValue = {
   setRootElement: (element: HTMLDivElement | null) => void
   setSpacerElement: (element: HTMLDivElement | null) => void
   setViewportElement: (element: HTMLDivElement | null) => void
-  pendingDefaultScrollStore: MessageScrollerStore<boolean>
+  pendingDefaultScrollStore: MessageScrollerStore<MessageScrollerPendingScroll>
   stateStore: MessageScrollerStore<MessageScrollerScrollable>
   syncAfterScroll: () => void
   unobserveVisibility: () => void
@@ -226,6 +233,7 @@ export type {
   MessageScrollerContextValue,
   MessageScrollerDefaultScrollPosition,
   MessageScrollerItemProps,
+  MessageScrollerPendingScroll,
   MessageScrollerMode,
   MessageScrollerProps,
   MessageScrollerProviderProps,

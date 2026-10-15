@@ -129,7 +129,9 @@ function MessageScroller({ children, ...props }: MessageScrollerProps) {
     <div
       ref={setRootElement}
       {...props}
-      {...(pendingDefaultScroll ? { "data-pending-scroll": "" } : null)}
+      {...(pendingDefaultScroll
+        ? { "data-pending-scroll": pendingDefaultScroll }
+        : null)}
     >
       {children}
     </div>
@@ -228,7 +230,9 @@ function MessageScrollerViewport({
       onTouchMove={handleTouchMove}
       onWheel={handleWheel}
       {...props}
-      {...(pendingDefaultScroll ? { "data-pending-scroll": "" } : null)}
+      {...(pendingDefaultScroll
+        ? { "data-pending-scroll": pendingDefaultScroll }
+        : null)}
     >
       {children}
     </div>

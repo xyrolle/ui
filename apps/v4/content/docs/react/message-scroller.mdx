@@ -135,49 +135,36 @@ export function Chat() {
 ## Avoiding a Flash on Reload
 
 A scroll container always opens at the top. HTML has no way to set `scrollTop`,
-so a server-rendered transcript shows the oldest messages first. After
-JavaScript runs, `defaultScrollPosition` moves the view, and you see a jump.
+so a server-rendered transcript would show the oldest messages first, then jump
+when JavaScript applies `defaultScrollPosition`.
 
-When `defaultScrollPosition` is `"end"` or `"last-anchor"`, the viewport has
-`data-pending-scroll` until that position is applied. Give the viewport an `id`
-and hide it while the attribute is present. Scope the rule to that id so you do
-not hide the root.
+While the opening position is pending, the viewport has `data-pending-scroll`
+set to `"end"` or `"last-anchor"`. Give the viewport an `id` and style both
+values. Scope the rules to that id so they do not apply to the root, which
+mirrors the attribute.
 
 ```css
-#messages[data-pending-scroll] {
+/* Pin the transcript to the bottom, so server HTML opens at the end. */
+#messages[data-pending-scroll="end"] {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+
+#messages[data-pending-scroll="end"] > * {
+  flex-shrink: 0;
+}
+
+/* The last anchored turn is only known after layout, so hide until then. */
+#messages[data-pending-scroll="last-anchor"] {
   visibility: hidden;
 }
 ```
 
-If you want `"end"` visible on first paint, add an inline script right after the
-viewport. Using the same `id`, scroll it to the bottom and remove
-`data-pending-scroll`.
-
-```tsx
-const scrollToEndScript = `(function () {
-  var viewport = document.getElementById("messages")
-  if (!viewport) {
-    return
-  }
-  viewport.scrollTop = viewport.scrollHeight
-  viewport.removeAttribute("data-pending-scroll")
-})()`
-
-<MessageScroller.Root>
-  <MessageScroller.Viewport id="messages" suppressHydrationWarning>
-    <MessageScroller.Content>{/* transcript */}</MessageScroller.Content>
-  </MessageScroller.Viewport>
-  <script dangerouslySetInnerHTML={{ __html: scrollToEndScript }} />
-  <MessageScroller.Button />
-</MessageScroller.Root>
-```
-
-Put the script in your page, not in the primitive. It only works for `"end"`, and
-only when the messages are already in the HTML. Add `suppressHydrationWarning` on
-the viewport. If you use a Content Security Policy, pass a `nonce`.
-
-Do not use this script with `"last-anchor"`. Skip it when messages load on the
-client.
+The provider removes `data-pending-scroll` before it measures the opening
+position. The pinned view then becomes a real scroll position without moving,
+and the reader can scroll up from there.
 
 ## API Reference
 
@@ -205,15 +192,14 @@ height-constrained layout, within a `MessageScroller.Provider`.
 
 The root mirrors the scroll-state attributes below (the viewport carries them
 too), so you can style the container by scroll state, such as edge fades on the
-frame. Headless usage should hide the viewport while `data-pending-scroll` is
-present, using `visibility: hidden` so layout still exists for the opening
-scroll.
+frame. Headless usage should style the viewport while `data-pending-scroll` is
+set. See [Avoiding a Flash on Reload](#avoiding-a-flash-on-reload).
 
-| Data attribute        | Value                                             | Description                                                                                                                                                                                                          |
-| --------------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `data-scrollable`     | `"start"` \| `"end"` \| `"start end"` \| _absent_ | Edges the viewport can scroll toward. Query one with `[data-scrollable~="end"]`; absent means it fits.                                                                                                               |
-| `data-autoscrolling`  | present                                           | Present while the viewport is programmatically scrolling to the latest message.                                                                                                                                      |
-| `data-pending-scroll` | present                                           | Present until `defaultScrollPosition` (`"end"` or `"last-anchor"`) is applied, or skipped for an empty transcript. Hide the viewport while it is set. See [Avoiding a Flash on Reload](#avoiding-a-flash-on-reload). |
+| Data attribute        | Value                                             | Description                                                                                                                                                                             |
+| --------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data-scrollable`     | `"start"` \| `"end"` \| `"start end"` \| _absent_ | Edges the viewport can scroll toward. Query one with `[data-scrollable~="end"]`; absent means it fits.                                                                                  |
+| `data-autoscrolling`  | present                                           | Present while the viewport is programmatically scrolling to the latest message.                                                                                                         |
+| `data-pending-scroll` | `"end"` \| `"last-anchor"`                        | The `defaultScrollPosition` still waiting to be applied. Removed once it is applied, or skipped for an empty transcript. See [Avoiding a Flash on Reload](#avoiding-a-flash-on-reload). |
 
 ### MessageScroller.Viewport
 
@@ -227,11 +213,11 @@ The scrollable viewport.
 | `tabIndex`                | `number`                      | `0`          | Makes the transcript viewport keyboard-scrollable.                        |
 | `...props`                | `React.ComponentProps<"div">` | -            | Props spread to the viewport element.                                     |
 
-| Data attribute        | Value                                             | Description                                                                                                                                                                                                          |
-| --------------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `data-scrollable`     | `"start"` \| `"end"` \| `"start end"` \| _absent_ | Edges the viewport can scroll toward. Query one with `[data-scrollable~="end"]`; absent means it fits.                                                                                                               |
-| `data-autoscrolling`  | present                                           | Present while the viewport is programmatically scrolling to the latest message.                                                                                                                                      |
-| `data-pending-scroll` | present                                           | Present until `defaultScrollPosition` (`"end"` or `"last-anchor"`) is applied, or skipped for an empty transcript. Hide the viewport while it is set. See [Avoiding a Flash on Reload](#avoiding-a-flash-on-reload). |
+| Data attribute        | Value                                             | Description                                                                                                                                                                             |
+| --------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data-scrollable`     | `"start"` \| `"end"` \| `"start end"` \| _absent_ | Edges the viewport can scroll toward. Query one with `[data-scrollable~="end"]`; absent means it fits.                                                                                  |
+| `data-autoscrolling`  | present                                           | Present while the viewport is programmatically scrolling to the latest message.                                                                                                         |
+| `data-pending-scroll` | `"end"` \| `"last-anchor"`                        | The `defaultScrollPosition` still waiting to be applied. Removed once it is applied, or skipped for an empty transcript. See [Avoiding a Flash on Reload](#avoiding-a-flash-on-reload). |
 
 ### MessageScroller.Content
 

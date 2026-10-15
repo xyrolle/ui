@@ -331,6 +331,12 @@ function useMessageScrollerController({
       return false
     }
 
+    // Styles may pin a pending "end" transcript to the bottom before hydration,
+    // which removes the viewport's scroll range. Release them before measuring.
+    for (const element of [rootRef.current, viewportRef.current]) {
+      element?.removeAttribute("data-pending-scroll")
+    }
+
     let handled = false
 
     if (defaultScrollPosition === "last-anchor") {

@@ -343,7 +343,7 @@ describe("MessageScroller", () => {
   it("emits data-pending-scroll on the server when opening at the end", () => {
     const html = renderToString(<PendingScrollTree testIds />)
 
-    expect(html).toContain('data-pending-scroll=""')
+    expect(html).toContain('data-pending-scroll="end"')
   })
 
   it("emits data-pending-scroll on the server when opening at last-anchor", () => {
@@ -351,7 +351,7 @@ describe("MessageScroller", () => {
       <PendingScrollTree defaultScrollPosition="last-anchor" scrollAnchor />
     )
 
-    expect(html).toContain('data-pending-scroll=""')
+    expect(html).toContain('data-pending-scroll="last-anchor"')
   })
 
   it("does not emit data-pending-scroll on the server when opening at the start", () => {
@@ -382,6 +382,31 @@ describe("MessageScroller", () => {
 
     expect(mounted.scroller?.hasAttribute("data-pending-scroll")).toBe(false)
     expect(mounted.viewport?.hasAttribute("data-pending-scroll")).toBe(false)
+    expect(consoleError).not.toHaveBeenCalled()
+    consoleError.mockRestore()
+  })
+
+  it("releases data-pending-scroll before measuring the opening position", async () => {
+    const tree = <PendingScrollTree items={["One", "Two"]} testIds />
+    const mounted = renderPendingScrollToContainer(tree)
+    const viewport = mounted.viewport as HTMLElement
+
+    // Styles that pin a pending "end" transcript to the bottom leave the
+    // viewport without a scroll range until the attribute is removed.
+    Object.defineProperty(viewport, "clientHeight", {
+      configurable: true,
+      value: 100,
+    })
+    Object.defineProperty(viewport, "scrollHeight", {
+      configurable: true,
+      get: () => (viewport.hasAttribute("data-pending-scroll") ? 100 : 400),
+    })
+
+    const consoleError = await mounted.hydrate()
+
+    expect(viewport.scrollTop).toBe(300)
+    expect(viewport.hasAttribute("data-pending-scroll")).toBe(false)
+    expect(mounted.scroller?.hasAttribute("data-pending-scroll")).toBe(false)
     expect(consoleError).not.toHaveBeenCalled()
     consoleError.mockRestore()
   })

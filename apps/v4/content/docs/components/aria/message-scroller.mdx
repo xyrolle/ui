@@ -332,43 +332,19 @@ Use `"start"` when you want to resume at the beginning of a conversation, or
 ### Avoiding a Flash on Reload
 
 A scroll container always opens at the top. HTML has no way to set `scrollTop`,
-so a server-rendered transcript shows the oldest messages first. After
-JavaScript runs, `defaultScrollPosition` moves the view, and you see a jump.
+so a server-rendered transcript would show the oldest messages first, then jump
+when JavaScript applies `defaultScrollPosition`.
 
-When `defaultScrollPosition` is `"end"` or `"last-anchor"`, the viewport has
-`data-pending-scroll` until that position is applied. The styled viewport stays
-hidden while the attribute is present, so you see the frame instead of the jump.
-`"start"` does not need this.
+While the opening position is pending, the viewport has `data-pending-scroll`
+set to `"end"` or `"last-anchor"`. `"start"` does not need it.
 
-If you want `"end"` visible on first paint, add an inline script right after the
-viewport. Give the viewport an `id`, scroll it to the bottom, and remove
-`data-pending-scroll`.
-
-```tsx
-const scrollToEndScript = `(function () {
-  var viewport = document.getElementById("messages")
-  if (!viewport) {
-    return
-  }
-  viewport.scrollTop = viewport.scrollHeight
-  viewport.removeAttribute("data-pending-scroll")
-})()`
-
-<MessageScroller>
-  <MessageScrollerViewport id="messages" suppressHydrationWarning>
-    <MessageScrollerContent>{/* transcript */}</MessageScrollerContent>
-  </MessageScrollerViewport>
-  <script dangerouslySetInnerHTML={{ __html: scrollToEndScript }} />
-  <MessageScrollerButton />
-</MessageScroller>
-```
-
-Put the script in your page, not in the scroller. It only works for `"end"`, and
-only when the messages are already in the HTML. Add `suppressHydrationWarning` on
-the viewport. If you use a Content Security Policy, pass a `nonce`.
-
-Do not use this script with `"last-anchor"`. Skip it when messages load on the
-client.
+- With `"end"`, the viewport pins the transcript to the bottom with CSS, so the
+  server HTML already shows the latest messages before any script runs. When
+  the position is applied, the pin is released for a real scroll position and
+  nothing moves.
+- With `"last-anchor"`, the position depends on the height of the last turn,
+  which is only known after layout. The viewport stays hidden until it is
+  applied, so you see the frame instead of the jump.
 
 ### Loading Earlier Messages
 

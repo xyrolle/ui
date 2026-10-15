@@ -1,6 +1,7 @@
 import * as React from "react"
 import { flushSync } from "react-dom"
-import { createRoot, type Root } from "react-dom/client"
+import { createRoot, hydrateRoot, type Root } from "react-dom/client"
+import { renderToString } from "react-dom/server"
 import { afterEach, expect, test } from "vitest"
 
 import {
@@ -47,12 +48,15 @@ type TestItem = {
 
 let root: Root | null = null
 let container: HTMLDivElement | null = null
+let pinStyle: HTMLStyleElement | null = null
 
 afterEach(() => {
   root?.unmount()
   container?.remove()
+  pinStyle?.remove()
   root = null
   container = null
+  pinStyle = null
 })
 
 function Thread({
@@ -695,4 +699,71 @@ test("auto-scroll and content updates survive a StrictMode remount", async () =>
 
   expect(getDistanceToBottom(viewport)).toBeLessThanOrEqual(1)
   expect(getVisibleIds().length).toBeGreaterThan(0)
+})
+
+// The stylesheet the docs give headless users: hold a pending "end" transcript
+// at the bottom with layout alone, so server HTML paints at the end before any
+// script runs.
+const PIN_PENDING_END_CSS = `
+  .pin-viewport { height: ${VIEWPORT_HEIGHT}px; overflow-y: auto; }
+  .pin-content { display: flex; flex-direction: column; min-height: 100%; }
+  .pin-viewport[data-pending-scroll="end"] {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+  }
+  .pin-viewport[data-pending-scroll="end"] > .pin-content { flex-shrink: 0; }
+`
+
+function PinnedThread({ items }: { items: TestItem[] }) {
+  return (
+    <MessageScrollerProvider defaultScrollPosition="end">
+      <MessageScroller>
+        <MessageScrollerViewport aria-label="viewport" className="pin-viewport">
+          <MessageScrollerContent className="pin-content">
+            {items.map((item) => (
+              <MessageScrollerItem
+                key={item.id}
+                messageId={item.id}
+                style={{ height: item.height ?? ITEM_HEIGHT, flex: "none" }}
+              >
+                {item.id}
+              </MessageScrollerItem>
+            ))}
+          </MessageScrollerContent>
+        </MessageScrollerViewport>
+      </MessageScroller>
+    </MessageScrollerProvider>
+  )
+}
+
+test("a server-rendered transcript pinned at the end does not move on hydration", async () => {
+  const items = createItems(10)
+  const last = items[items.length - 1].id
+
+  pinStyle = document.createElement("style")
+  pinStyle.textContent = PIN_PENDING_END_CSS
+  document.head.appendChild(pinStyle)
+  container = document.createElement("div")
+  container.innerHTML = renderToString(<PinnedThread items={items} />)
+  document.body.appendChild(container)
+  await settle()
+
+  const viewport = getViewport()
+
+  // Before hydration: no script has run, and the last message already sits at
+  // the bottom edge.
+  expect(viewport.getAttribute("data-pending-scroll")).toBe("end")
+  expect(viewportOffsetOf(last, viewport)).toBe(VIEWPORT_HEIGHT - ITEM_HEIGHT)
+
+  root = hydrateRoot(container, <PinnedThread items={items} />)
+  await settle()
+
+  // After hydration the pin is released and the same view is held by a real
+  // scroll position, so the reader can scroll up from here.
+  expect(viewport.hasAttribute("data-pending-scroll")).toBe(false)
+  expect(getDistanceToBottom(viewport)).toBeLessThanOrEqual(1)
+  expect(getScrollTop(viewport)).toBe(10 * ITEM_HEIGHT - VIEWPORT_HEIGHT)
+  expect(viewportOffsetOf(last, viewport)).toBe(VIEWPORT_HEIGHT - ITEM_HEIGHT)
 })
